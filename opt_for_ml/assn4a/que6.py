@@ -21,6 +21,17 @@ sol = cp.solvers.qp(
 
 print(sol["x"])
 print(sol['primal objective'] + data['const'])
+print(sol['z'])
+
+def complementary_slackness(x_star: np.array, A: np.array, b: np.array, lambd: np.array):
+    A = A.astype(np.float64)
+    ax_b = np.dot(A,x_star) - b;
+    a = np.zeros((lambd.shape[0],lambd.shape[0]))
+    np.fill_diagonal(a,lambd.reshape(lambd.shape[0]))
+    comp_slack = np.dot(a,ax_b)
+    return comp_slack
+
+print(complementary_slackness(np.array(sol['x']),A,b,np.array(sol['z'])))
 
 """
 Optimal solution found.

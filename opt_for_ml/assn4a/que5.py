@@ -22,6 +22,7 @@ sol = cp.solvers.qp(
 print(sol["x"])
 print(sol['primal objective'] + data['const'])
 
+print(sol['z'])
 """
 Optimal solution found.
 [ 2.50e+00]
