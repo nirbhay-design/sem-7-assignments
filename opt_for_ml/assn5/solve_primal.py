@@ -32,18 +32,30 @@ sol = cp.solvers.qp(
 print(sol["x"])
 print(sol['primal objective'])
 
-def plot_line(csv_data, W, target_data, save_path):
+L = np.array(sol['z'])
+L = np.array(list(map(lambda x: round(x[0],5),L))).reshape(-1,1)
+
+def plot_line(csv_data, W, target_data,L, save_path):
+    new_csv_data = np.hstack([csv_data,L])
+    new_csv_data = new_csv_data[new_csv_data[:,-1] != 0]
+    new_x1 = new_csv_data[:,0]
+    new_x2 = new_csv_data[:,1]
     csv_data = np.hstack([csv_data, target_data])
     w1, w2, b = W.reshape(W.shape[0])
     x1 = csv_data[:,0]
     # x-> x1, y-> x2
     x2_values = (-w1 * x1 - b)/w2
+    x2_values_1 = (-w1 * x1 - b - 1)/w2
+    x2_values_2 = (-w1 * x1 - b + 1)/w2
     x11 = csv_data[csv_data[:,2] == 1]
     x12 = csv_data[csv_data[:,2] == -1]
     plt.figure(figsize=(5,4))
     plt.scatter(x11[:,0],x11[:,1],color='blue', label='+1')
     plt.scatter(x12[:,0],x12[:,1],color='purple',label='-1')
     plt.plot(x1,x2_values,color='red')
+    plt.plot(x1,x2_values_1,color='green')
+    plt.plot(x1,x2_values_2,color='green')
+    plt.scatter(new_x1,new_x2,color='black')
     plt.xlabel('x1')
     plt.ylabel('x2')
     plt.legend()
@@ -55,7 +67,7 @@ w_b = np.array(sol["x"])
 # w_b[1] = w_b[0]
 # w_b[0] = w2
 
-plot_line(csv_data, w_b, target_data, sys.argv[3])
+plot_line(csv_data, w_b, target_data, L, sys.argv[3])
 
 """
 Optimal solution found.
