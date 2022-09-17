@@ -1,7 +1,7 @@
 from gettext import find
 import hashlib, json, copy
 from ecdsa import SigningKey
-import datetime, random
+import datetime, random, time
 
 def find_hash(text):
     m = hashlib.sha256()
@@ -71,27 +71,21 @@ class wallet:
         return sk, pk
         # signature = sk.sign(b"message")
         # vk.verify(signature, b"message")
-    def sign_transaction(self,transaction:dict, fees:int):
+    def sign_transaction(self,transaction:dict, user_idx: int):
         # for to
-        is_transaction_possible = self.utxo.is_transaction_possible(transaction['btc']+fees)
+        is_transaction_possible = self.utxo.is_transaction_possible(transaction['btc']+transaction['fees'])
         if is_transaction_possible:
-            transaction_message = transaction['from']+transaction['to']+str(transaction['btc'])
+            transaction_message = transaction['from']+transaction['to']+str(transaction['btc'])+str(transaction['fees'])
             transaction_hash = find_hash(transaction_message)
             transaction_signature = self.sk.sign(transaction_hash.encode()).hex()
         else:
             # print("transaction not possible")
-            return
+            return  
 
-        signaturized_transaction = {**transaction, "sign":transaction_signature, "hash":transaction_hash}
+
+        transaction_id = find_hash(transaction_message+str(user_idx))
+        signaturized_transaction = {**transaction, "sign":transaction_signature, "hash":transaction_hash, "id": transaction_id}
         return signaturized_transaction
-
-    # def verify_signature(self,signaturized_transaction):
-    #     transaction_message = signaturized_transaction['from']+signaturized_transaction['to']+str(signaturized_transaction['btc'])
-    #     transaction_hash = find_hash(transaction_message)
-    #     byt = bytes()
-    #     byte_sign = byt.fromhex(signaturized_transaction['sign'])
-    #     transaction_verify = self.pk.verify(byte_sign,transaction_hash.encode())
-    #     print(transaction_verify)
 
     def update_utxo(self, transaction_btc):
         self.utxo.utxotransaction(transaction_btc)
@@ -100,17 +94,25 @@ class wallet:
         self.utxo.add_transaction(transaction)
 
     def show_wallet(self):
+        print("address: ", self.hash)
+
+    def show_utxo(self):
         self.utxo.show_utxo()
 
 class users:
     def __init__(self):
         self.w = wallet()
+        self.connected_miner = []
 
     def pkhash(self):
         return self.w.hash
 
     def pk(self):
         return self.w.pk
+
+    def miner_connection(self, miner_connected):
+        self.connected_miner.append(miner_connected)
+
 
 class block:
     def __init__(self,**kwargs):
@@ -151,8 +153,8 @@ class block:
         print(f"cur_hash: {self.cur_hash}")
         print(f"merkle_root_hash: {self.merkle_hash}")
         print(f"----- Transactions -----")
-        for i in self.transactions:
-            print(f"{i['from']} -> {i['to']} {i['btc']}")
+        for i in self.transaction_hash:
+            print(i)
         print('\n')
 
 class miner:
@@ -168,7 +170,7 @@ class miner:
                 print("invalid neighbor argument")
         
         self.blockchain = []
-        self.mempool = []
+        self.mempool = {}
         self.miner_wallet = wallet()
         self.max_nonce = int(1e8)
 
@@ -181,7 +183,7 @@ class miner:
 
     def validate_transaction(self, signaturized_transaction: dict, from_user: users):
         # transaction contains {from, to, btc, sign}
-            transaction_message = signaturized_transaction['from']+signaturized_transaction['to']+str(signaturized_transaction['btc'])
+            transaction_message = signaturized_transaction['from']+signaturized_transaction['to']+str(signaturized_transaction['btc']) + str(signaturized_transaction['fees'])
             transaction_hash = find_hash(transaction_message)
             byt = bytes()
             byte_sign = byt.fromhex(signaturized_transaction['sign'])
@@ -193,7 +195,19 @@ class miner:
             return transaction_verify
 
     def add_to_mempool(self, transaction):
-        self.mempool.append(transaction)
+        self.mempool[transaction['id']] = transaction
+
+    def update_mempool(self):
+        cur_mempool_transaction_id = list(self.mempool.keys())
+        self.mempool = {}
+        for idx in range(len(self.miner_neighbors)):
+            for tran_id in cur_mempool_transaction_id:
+                self.miner_neighbors[idx].mempool.pop(tran_id)
+                # print(f"updated miner {idx} mempool {self.miner_neighbors[idx].mempool}")
+
+    def propogate_to_othermempools(self):
+        for idx in range(len(self.miner_neighbors)):
+            self.miner_neighbors[idx].mempool = copy.deepcopy(self.mempool)
 
     def mine_block(self, transaction_list: list):
         # transaction_list contains the hashes of all the transactions
@@ -229,12 +243,13 @@ class miner:
         else:
             print('nonce exhausted')
 
-    def verify_block(self, block:block):
-        pass
-
     def pass_blockchain(self):
         for miner_idx in range(len(self.miner_neighbors)):
             self.miner_neighbors[miner_idx].blockchain = copy.deepcopy(self.blockchain)
+
+    def show_mempool(self):
+        for tran_id in self.mempool.values():
+            print(tran_id)
 
 class blockchain:
     def __init__(self,n_miners = 10, n_users=20):
@@ -246,25 +261,31 @@ class blockchain:
         for i in range(n_miners):
             ith_miner = miner(self.user_list[2*i], self.user_list[2*i+1])
             self.miner_list.append(ith_miner)
+            self.user_list[2*i].miner_connection(ith_miner)
+            self.user_list[2*i+1].miner_connection(ith_miner)
         for i in range(n_miners):
             self.miner_list[i].miner_neighbour(*(self.miner_list[:i]+self.miner_list[i+1:]))
 
         # add some initial transactions to utxo;
         for i in range(n_users):
             self.user_list[i].w.add_utxo({"from":self.user_list[random.randint(0,n_users-1)].pkhash(),"to":self.user_list[i].pkhash(),'btc':3})
-            self.user_list[i].w.add_utxo({"from":self.user_list[random.randint(0,n_users-1)].pkhash(),"to":self.user_list[i].pkhash(),'btc':5})
+            self.user_list[i].w.add_utxo({"from":self.user_list[random.randint(0,n_users-1)].pkhash(),"to":self.user_list[i].pkhash(),'btc':50})
             self.user_list[i].w.add_utxo({"from":self.user_list[random.randint(0,n_users-1)].pkhash(),"to":self.user_list[i].pkhash(),'btc':1})
-            self.user_list[i].w.add_utxo({"from":self.user_list[random.randint(0,n_users-1)].pkhash(),"to":self.user_list[i].pkhash(),'btc':1})
+            self.user_list[i].w.add_utxo({"from":self.user_list[random.randint(0,n_users-1)].pkhash(),"to":self.user_list[i].pkhash(),'btc':10})
+
+        self.transaction_database = {}
 
     def transaction(self, transactions):
         transactions_list = []
+        all_transactions = []
         not_verified_transaction = []
         user_amount_deduct = {}
         for idx, (from_idx, to_idx, btc, fees) in enumerate(transactions):
-            transact = {"from":self.user_list[from_idx].pkhash(), "to":self.user_list[to_idx].pkhash(), "btc": btc}
+            transact = self.generate_transaction(from_idx, to_idx, btc, fees)
+            all_transactions.append(transact)
             
             if user_amount_deduct.get(from_idx, -1) == -1:
-                signed_transaction = self.user_list[from_idx].w.sign_transaction(transact, fees)
+                signed_transaction = self.user_list[from_idx].w.sign_transaction(transact, from_idx)
             else:
                 signed_transaction = self.user_list[from_idx].w.sign_transaction(transact, user_amount_deduct[from_idx] + fees)
             
@@ -284,30 +305,46 @@ class blockchain:
                 return False
 
             transactions_list.append(signed_transaction)
+            self.transaction_database[signed_transaction['hash']] = signed_transaction
+            self.user_list[from_idx].connected_miner[0].add_to_mempool(signed_transaction)
+            self.user_list[from_idx].connected_miner[0].propogate_to_othermempools()
 
-        # randomly select a miner to do the mining
         if not transactions_list:
             return False
 
-        random_miner = random.randint(0, self.n_miners-1)
-        print(random_miner)
-        self.miner_list[random_miner].mine_block(transactions_list)
-        self.miner_list[random_miner].pass_blockchain()
+        # randomly select a miner to do the mining
+        chosen_miner, _ = self.proof_of_work()
+        print("miner chosen: ", chosen_miner)
+        miner_selected = self.miner_list[chosen_miner]
+        miner_selected.pass_blockchain()
+        miner_selected.update_mempool()
 
         for idx, (from_idx, to_idx, btc, fees) in enumerate(transactions):
             if idx not in not_verified_transaction:
-                transact = {"from":self.user_list[from_idx].pkhash(), "to":self.user_list[to_idx].pkhash(), "btc": btc}
-                self.user_list[from_idx].w.update_utxo(transact['btc']+fees)
+                transact = all_transactions[idx]
+                self.user_list[from_idx].w.update_utxo(transact['btc']+transact['fees'])
                 self.user_list[to_idx].w.add_utxo(transact)
-                self.miner_list[random_miner].miner_wallet.add_utxo(
+                self.miner_list[chosen_miner].miner_wallet.add_utxo(
                     {
                         'from': self.user_list[from_idx].pkhash(), 
-                        "to":self.miner_list[random_miner].miner_wallet.hash,
+                        "to":self.miner_list[chosen_miner].miner_wallet.hash,
                         'btc': fees
                     }
                 )
 
         return True
+
+    def proof_of_work(self):
+        time_list = []
+        for idx in range(len(self.miner_list)):
+            time1 = time.perf_counter();
+            cur_miner = self.miner_list[idx]
+            mempool_transactions = list(cur_miner.mempool.values())
+            cur_miner.mine_block(mempool_transactions)
+            time2 = time.perf_counter();
+            time_list.append((idx,time2 - time1))
+        # print(time_list)
+        return min(time_list, key=lambda x:x[1])
         
     def verify_transaction(self, transaction, from_idx):
         verify = True
@@ -316,14 +353,18 @@ class blockchain:
 
         return verify
 
-    def verify_block(self):
-        pass
+    def generate_transaction(self, from_idx: int, to_idx: int, btc: int, fees: int):
+        transact = {"from":self.user_list[from_idx].pkhash(), "to":self.user_list[to_idx].pkhash(), "btc": btc, "fees":fees}
+        return transact
 
     def show_user_utxo(self, user_idx):
-        self.user_list[user_idx].w.show_wallet()
+        self.user_list[user_idx].w.show_utxo()
 
     def show_miner_utxo(self, miner_idx):
-        self.miner_list[miner_idx].miner_wallet.show_wallet()
+        self.miner_list[miner_idx].miner_wallet.show_utxo()
+
+    def show_miner_mempool(self, miner_idx):
+        self.miner_list[miner_idx].show_mempool()
 
     def show_blockchain(self):
         for block in self.miner_list[0].blockchain:
@@ -346,6 +387,9 @@ class blockchain:
     def show_miner(self):
         for idx, mine in enumerate(self.miner_list):
             print(f"{idx} -> {mine.miner_wallet.hash}")
+
+    def show_transactions(self):
+        print(self.transaction_database)
 
 if __name__ == "__main__":
     blockc = blockchain()
@@ -372,6 +416,7 @@ if __name__ == "__main__":
             blockc.transaction(transactions_info)               
         elif choice == 1:
             blockc.show_blockchain()
+            # blockc.show_transactions()
 
         elif choice == 2:
             user_idx = int(input("enter user index: "))
@@ -383,5 +428,3 @@ if __name__ == "__main__":
 
         elif choice == 4:
             break
-
-
