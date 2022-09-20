@@ -5,16 +5,30 @@
 
 ### How To Run
 
+`optional`
+
 **First create the conda env**
 
 ```
-conda env create -n env_name -f env.yml
+conda env create -n <env_name> -f env.yml
 ```
 
 **Then activate the env**
 
 ```
-conda activate env_name
+conda activate <env_name>
+```
+
+**Then run the file**
+
+```
+python b19cse114.py
+```
+
+### OR Install dependencies using requirements.txt file
+
+```
+pip install -r requirements.txt
 ```
 
 **Then run the file**

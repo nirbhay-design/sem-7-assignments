@@ -8,7 +8,6 @@ class Config:
     sample_input = np.array([4000,4+3,1])
 
 config = Config()
-
 dt=pd.read_excel(config.xl_path)
 B=dt.values
 features, label = B[:,0:-1],B[:,-1]

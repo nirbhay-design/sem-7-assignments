@@ -153,8 +153,11 @@ class block:
         print(f"cur_hash: {self.cur_hash}")
         print(f"merkle_root_hash: {self.merkle_hash}")
         print(f"----- Transactions -----")
-        for i in self.transaction_hash:
-            print(i)
+        for idx, transaction in enumerate(self.transactions):
+            print(f"{'#'*5} transaction {idx} details {'#'*5}")
+            print(f"transaction id: {transaction['id']}")
+            print(f"transaction hash: {transaction['hash']}")
+            print(f"{transaction['from']} -> {transaction['to']}, btc: {transaction['btc']}, fees: {transaction['fees']}")
         print('\n')
 
 class miner:
