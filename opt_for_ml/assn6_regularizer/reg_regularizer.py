@@ -8,6 +8,7 @@ class Config:
     xl_path = sys.argv[1]
     sample_input = np.array([4000,4+3,1])
     rows = int(sys.argv[2])
+    lambd = 0.1
 
 def l2_reg(A:np.array, label:np.array, lambd:float)->np.array:
     total_features, num_features = A.shape
@@ -77,9 +78,10 @@ if __name__ == "__main__":
     features, label = B[:config.rows,0:-1],B[:config.rows,-1:]
     np_ones = np.ones((features.shape[0],1),dtype=float)
     A = np.hstack((features,np_ones))
-    wts_l2 = l2_reg(A,label, 0.1)    
-    wts_l1 = l1_reg(A,label,0.1)
-    wts_li = l_inf_reg(A,label,0.1)
+    lambd = config.lambd
+    wts_l2 = l2_reg(A,label, lambd)    
+    wts_l1 = l1_reg(A,label,lambd)
+    wts_li = l_inf_reg(A,label,lambd)
     print(wts_l2)
     print(wts_l1)
     print(wts_li)
