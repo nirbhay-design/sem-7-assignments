@@ -24,17 +24,25 @@ bash run.sh que1.cpp
 bash run.sh que2.cpp
 ```
 
+*Then enter input in the form of x1 y1 x2 y2 x3 y3 which implies triangle with 3 points as (x1, y1), (x2, y2) $\\&$ (x3,y3)*
+
 #### To run que2_triangle_midpt.cpp (triangle using mid point line algorithm)
 
 ```
 bash run.sh que2_triangle_midpt.cpp
 ```
 
+*Then enter input in the form of x1 y1 x2 y2 x3 y3 which implies triangle with 3 points as (x1, y1), (x2, y2) $\\&$ (x3,y3)*
+
+
 #### To run que2_supersampling.cpp (triangle using super sampling)
 
 ```
 bash run.sh que2_supersampling.cpp
 ```
+
+*Then enter input in the form of x1 y1 x2 y2 x3 y3 which implies triangle with 3 points as (x1, y1), (x2, y2) $\\&$ (x3,y3)*
+
 
 #### To run que3.cpp (circle)
 

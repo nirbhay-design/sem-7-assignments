@@ -4,6 +4,7 @@
 #include <bits/stdc++.h>
 using namespace std;
 
+pair<int,int> p1,p2,p3;
 
 void init (void)
 {
@@ -304,12 +305,14 @@ void dispPoint (void)
 	glColor3f (1.0, 0.0, 0.0); // Set point color to green.
 	glPointSize(2.0f); // Set point size
 	glBegin(GL_POINTS);// Marks the beginning of the vertices list
-		supersampling_triangle({5*2,5*2},{400*2,300*2},{110*2,400*2});	
+
+		supersampling_triangle({p1.first*2,p1.second*2},{p2.first*2,p2.second*2},{p3.first*2,p3.second*2});	
 	glEnd( );
 	glFlush( ); 
 }
 int main (int argc, char** argv)
 {
+	cin >> p1.first >> p1.second >> p2.first >> p2.second >> p3.first >> p3.second;
 	glutInit (&argc, argv); // Initialize GLUT.
 	glutInitDisplayMode (GLUT_SINGLE | GLUT_RGB); // Set display mode.
 	glutInitWindowPosition (10, 30); // Set top-left display-window position.
