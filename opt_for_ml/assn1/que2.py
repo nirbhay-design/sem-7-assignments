@@ -28,6 +28,8 @@ def get_solution(degree,dt):
     B=dt.values
     x,y = B[:,0],B[:,1]
     A = polynomial_matrix(x,degree)
+    print(A.shape)
+    print(np.linalg.matrix_rank(A))
     beta=np.dot(np.linalg.inv(np.dot(A.T,A)),np.dot(A.T,y.T))
     print(beta)
     print("value on sample input")
@@ -47,8 +49,8 @@ def get_solution(degree,dt):
 
 dt=pd.read_excel(config.xl_path)
 
-get_solution(2,dt)
+# get_solution(2,dt)
 get_solution(3,dt)
-get_solution(4,dt)
+# get_solution(4,dt)
 # get_solution(5,dt)
 # get_solution(6,dt)

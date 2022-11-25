@@ -13,8 +13,8 @@ b=np.array(data['b'])
 aeq = np.array(data['aeq'])
 beq = np.array(data['beq'])
 
-sol = cp.solvers.lp(cp.matrix(
-    c,tc="d"), 
+sol = cp.solvers.lp(
+    cp.matrix(c,tc="d"), 
     cp.matrix(A,tc="d"),
     cp.matrix(b,tc="d"),
     cp.matrix(aeq,tc='d'), # error in named parameters
